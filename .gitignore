@@ -1,0 +1,6 @@
+.DS_Store
+.ipa
+.app
+out/
+tools/
+FTL.backup
