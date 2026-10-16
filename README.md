@@ -92,6 +92,13 @@ GLFIX_DEBUG=1 ./out/FTL.app/FTL
 - **Crash in `libGL` right after startup**: `glfix.dylib` is not being applied. Check that `otool -L out/FTL.app/FTL | grep glfix` shows a match, and start with `GLFIX_DEBUG=1`. You should see an `OpenGLES handle` line.
 - **A tool is missing (`vtool`, `lipo`, ...)**: Install the Command Line Tools with `xcode-select --install`.
 
+## Showcase
+Yes! The game has to be played with touch inputs since the mouse and keyboard inputs are not being feed to the internal handlers on touch builds. (I plan to patch this with a future update)
+<img width="413,5" height="298,5" alt="Bildschirmfoto 2026-10-16 um 20 45 16" src="https://github.com/user-attachments/assets/ded3858b-f5b6-4c66-89ff-37b48c9fd0e0" />
+<img width="413,5" height="298,5" alt="Bildschirmfoto 2026-10-16 um 20 49 42" src="https://github.com/user-attachments/assets/57238bc1-ac70-4c69-bf06-9f46de199a8f" />
+<img width="413,5" height="298,5" alt="Bildschirmfoto 2026-10-16 um 20 55 46" src="https://github.com/user-attachments/assets/23c1d8a8-607d-463b-a006-a1184b4e08ba" />
+<img width="413,5" height="298,5" alt="Bildschirmfoto 2026-10-16 um 20 50 25" src="https://github.com/user-attachments/assets/596c256a-2a1d-445a-a323-1a86c61c23b2" />
+
 ## Legal
 
 This repository contains only the patching tools. It does not include FTL, an IPA, or a patched app, and it does not help with obtaining or decrypting an IPA. You are responsible for owning a legitimate copy of the game and for how you obtain a decrypted copy of it. *FTL: Faster Than Light* is the property of Subset Games.
