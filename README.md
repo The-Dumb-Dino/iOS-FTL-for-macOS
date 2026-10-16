@@ -25,6 +25,8 @@ Known limitations:
 - The app runs without a sandbox container, so it has no `~/Library/Containers/<bundle-id>` folder. Where save data ends up has not been verified.
 - Starting the app through Finder or `open` has not been tested. Run the binary directly as shown below.
 
+</br>
+
 ## Requirements
 
 - A Mac with Apple Silicon
@@ -34,22 +36,32 @@ Known limitations:
 
 ## Usage
 
+**Option 1:** Grab release
+
+Download the latest ``iOS-FTL-on-macOS-x.x.x.zip`` from the [release](https://github.com/The-Dumb-Dino/iOS-FTL-for-macOS/releases) page and unpack it.
+
+**Option 2:** Clone
 ```
 git clone https://github.com/The-Dumb-Dino/iOS-FTL-for-macOS
 cd iOS-FTL-for-macOS
-python3 ftl_to_mac.py ~/Downloads/FTL.ipa
-./out/FTL.app/FTL
 ```
 
-The input can be any of these:
-
+Run the script, the input can be any of these:
 ```
 python3 ftl_to_mac.py FTL.ipa
 python3 ftl_to_mac.py FTL.app
 python3 ftl_to_mac.py FTL.app.zip
 ```
 
+Optional: Launch and verify your patched FTL
+```
+./out/FTL.app/FTL
+```
+
 The finished app is written to `out/` (change with `-o`). An existing app with the same name in the output directory is replaced. All intermediate work happens in a hidden `.build-*` folder inside the output directory, which is deleted at the end, so a failed run never leaves a half-patched app behind.
+You can now move it to your applications folder if you want to.
+
+</br>
 
 ### Options
 
