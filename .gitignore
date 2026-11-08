@@ -1,6 +1,8 @@
 .DS_Store
-.ipa
-.app
+*.ipa
+*.app/
+ftl.dat*
 out/
 tools/
 FTL.backup
+__pycache__/

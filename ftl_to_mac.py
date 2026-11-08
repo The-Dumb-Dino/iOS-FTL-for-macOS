@@ -10,7 +10,9 @@ Steps:
   1. Obtain the .app and check that the arm64 slice is decrypted.
   2. Thin the binary to arm64.
   3. Rewrite the platform to Mac Catalyst (AMFI rejects the iOS platform).
-  4. Build glfix.dylib from glfix.c and link it into the binary.
+  4. Build ftlmac.dylib (glfix.c, hooks.c, png.c, hyperspace.c, ftlmac.m) and link it into the binary.
+     With --hyperspace, also copy Hyperspace's dylib in; ftlmac.dylib starts it when
+     the applied mods include it.
   5. Re-sign everything ad hoc.
 
 The IPA/app must already be decrypted; this script does not decrypt anything.
@@ -36,7 +38,11 @@ TOOLS_DIR = Path(__file__).resolve().parent / "tools"
 
 CATALYST_MINOS = "11.0"
 CATALYST_SDK = "14.0"
-DYLIB_NAME = "glfix.dylib"
+DYLIB_NAME = "ftlmac.dylib"
+# The dylib's sources: the OpenGL fix, the game patches, window and input.
+DYLIB_SOURCES = ["glfix.c", "hooks.c", "png.c", "hyperspace.c", "ftlmac.m"]
+# Optional, built from FTL-Hyperspace-Dino (buildscripts/macos/)
+HYPERSPACE_NAME = "Hyperspace.1.6.21.arm64.dylib"
 INSTALL_NAME = f"@executable_path/Frameworks/{DYLIB_NAME}"
 
 
@@ -112,10 +118,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("input", type=Path, help="decrypted IPA, .app bundle, or zipped .app")
     parser.add_argument("-o", "--output", type=Path, default=Path("out"), help="output directory (default: ./out)")
-    parser.add_argument("--glfix", type=Path, default=Path(__file__).resolve().parent / "glfix.c", help="path to glfix.c (default: next to this script)")
+    parser.add_argument("--src", type=Path, default=Path(__file__).resolve().parent, help="directory with the dylib's sources (default: next to this script)")
     parser.add_argument("--insert-dylib", type=Path, help="use this insert-dylib binary instead of downloading the pinned release")
     parser.add_argument("--keep-tools", action="store_true", help="copy downloaded tools into ./tools/ instead of letting them be deleted with the work directory")
+    parser.add_argument("--hyperspace", type=Path, help="also install this Hyperspace.1.6.21.arm64.dylib (optional; it only starts when the applied mods include Hyperspace)")
     args = parser.parse_args()
+
+    if args.hyperspace is not None and not args.hyperspace.is_file():
+        die(f"Hyperspace dylib not found: {args.hyperspace}")
 
     args.output.mkdir(parents=True, exist_ok=True)
 
@@ -170,22 +180,35 @@ def main():
         shutil.move(str(patched), str(binary))
         binary.chmod(0o755)
 
-        # Build glfix.dylib from source do I don't have tp store a precompiled binary anywhere.
-        step("Building glfix.dylib")
+        # Build the dylib from source so I don't have to store a precompiled binary anywhere.
+        step(f"Building {DYLIB_NAME}")
         sdk_path = run(["xcrun", "--sdk", "macosx", "--show-sdk-path"]).strip()
         frameworks = app / "Frameworks"
         frameworks.mkdir(exist_ok=True)
         dylib = frameworks / DYLIB_NAME
-        run(["xcrun", "clang", "-target", "arm64-apple-ios14.0-macabi", "-isysroot", sdk_path, "-dynamiclib", args.glfix, "-o", dylib])
+        ios_support = Path(sdk_path) / "System/iOSSupport"
+        run(["xcrun", "clang", "-target", "arm64-apple-ios14.0-macabi", "-isysroot", sdk_path,
+             "-iframework", ios_support / "System/Library/Frameworks", "-isystem", ios_support / "usr/include",
+             "-fobjc-arc", "-O2", "-framework", "UIKit", "-framework", "Foundation", "-framework", "CoreGraphics",
+             "-dynamiclib", *[args.src / name for name in DYLIB_SOURCES], "-o", dylib])
 
         # Link the dylib into the binary. The old code signature is already invalid after the platform change, so it is stripped here.
-        step("Linking glfix.dylib into the binary")
+        step(f"Linking {DYLIB_NAME} into the binary")
         run([insert_dylib, "--inplace", "--strip-codesig", "--all-yes", INSTALL_NAME, binary])
 
-        # Sign ad hoc, dylib first.
+        # Optional: Hyperspace. ftlmac.dylib loads it from Frameworks/ when ftl.dat includes it.
+        hyperspace = None
+        if args.hyperspace is not None:
+            step("Adding Hyperspace")
+            hyperspace = frameworks / HYPERSPACE_NAME
+            shutil.copy2(args.hyperspace, hyperspace)
+
+        # Sign ad hoc, dylibs first.
         step("Signing")
         run(["xattr", "-cr", app])
         run(["codesign", "-f", "-s", "-", dylib])
+        if hyperspace is not None:
+            run(["codesign", "-f", "-s", "-", hyperspace])
         run(["codesign", "-f", "-s", "-", "--entitlements", entitlements, app])
 
         # Move the finished app into place.
